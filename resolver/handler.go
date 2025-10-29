@@ -35,6 +35,8 @@ var blockedDomains = map[string]bool{
 	"gads.g.doubleclick.net":          true,
 	"securepubads.g.doubleclick.net":  true,
 	"static.doubleclick.net":          true,
+	"pagead2.googlesyndication.com.":  true,
+	"pagead2.googlesyndication.com":   true,
 }
 
 func HandleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
