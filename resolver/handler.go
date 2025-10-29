@@ -6,21 +6,27 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/miekg/dns"
 	"github.com/nikhilthakur8/advoid/upstreams"
 )
 
-var blockedDomains map[string]bool
+var blockedDomains = make(map[string]bool)
 
 func init() {
-	const filePath = "../oisd_big_abp.txt"
+	cwd, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("Failed to get current directory: %v", err)
+	}
+	filePath := filepath.Join(cwd, "oisd_big_abp.txt")
+
 	file, err := os.Open(filePath)
 	if err != nil {
+		log.Printf("Error opening blocklist file: %v\n", err)
 		return
 	}
-
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
