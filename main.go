@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/miekg/dns"
@@ -9,10 +10,13 @@ import (
 )
 
 func main() {
+	log.Printf("I am running")
 	dns.HandleFunc(".", resolver.HandleDNSRequest)
 	r := gin.Default()
 	r.POST("/", resolver.HandleDOHRequest)
-
+	r.GET("/", func(c *gin.Context) {
+		c.String(http.StatusOK, "Hello from Nikhil Thakur")
+	})
 	// updServer := &dns.Server{Addr: ":53", Net: "udp"}
 	// tcpServer := &dns.Server{Addr: ":53", Net: "tcp"}
 
