@@ -32,7 +32,9 @@ func main() {
 
 	go func() {
 		log.Println("Starting DoH server on :443 (HTTPS)")
-		if err := r.RunTLS(":443", "fullchain.pem", "privkey.pem"); err != nil {
+		certFile := "/etc/letsencrypt/live/avoid.clouly.in/fullchain.pem"
+		keyFile := "/etc/letsencrypt/live/avoid.clouly.in/privkey.pem"
+		if err := r.RunTLS(":443", certFile, keyFile); err != nil {
 			log.Fatalf("Failed to start DoH server: %v", err)
 		}
 	}()
