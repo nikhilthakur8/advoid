@@ -26,17 +26,17 @@ var blockedDomains = map[string]bool{
 }
 
 func HandleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
-	qname := strings.ToLower(r.Question[0].Name)
-	if blockedDomains[qname] {
-		log.Printf("Blocked domain requested: %s\n", qname)
-		m := new(dns.Msg)
-		m.SetReply(r)
-		m.Rcode = dns.RcodeNameError
-		w.WriteMsg(m)
-		return
-	}
 	for _, question := range r.Question {
 		log.Printf("Received query for %s\n", question.Name)
+		qname := strings.ToLower(question.Name)
+		if blockedDomains[qname] {
+			log.Printf("Blocked domain requested: %s\n", qname)
+			m := new(dns.Msg)
+			m.SetReply(r)
+			m.Rcode = dns.RcodeNameError
+			w.WriteMsg(m)
+			return
+		}
 	}
 
 	resp := upstreams.QueryUpstream(r)
@@ -60,6 +60,26 @@ func HandleDOHRequest(w http.ResponseWriter, r *http.Request) {
 	if err := msg.Unpack(req); err != nil {
 		http.Error(w, "Invalid wire format", http.StatusBadRequest)
 		return
+	}
+
+	for _, question := range msg.Question {
+		log.Printf("Received DOH query for %s\n", question.Name)
+		qName := strings.ToLower(question.Name)
+		if blockedDomains[qName] {
+			log.Printf("Blocked domain requested via DOH: %s\n", qName)
+			m := new(dns.Msg)
+			m.SetReply(&msg)
+			m.Rcode = dns.RcodeNameError
+			packedResp, err := m.Pack()
+			if err != nil {
+				http.Error(w, "Failed to pack response", http.StatusInternalServerError)
+				return
+			}
+			w.Header().Set("Content-Type", "application/dns-message")
+			w.WriteHeader(http.StatusOK)
+			w.Write(packedResp)
+			return
+		}
 	}
 
 	resp := upstreams.QueryUpstream(&msg)
