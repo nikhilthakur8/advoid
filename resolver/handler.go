@@ -1,10 +1,10 @@
 package resolver
 
 import (
+	"io"
 	"log"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"github.com/miekg/dns"
 	"github.com/nikhilthakur8/advoid/upstreams"
 )
@@ -24,30 +24,32 @@ func HandleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
 	w.WriteMsg(resp)
 }
 
-func HandleDOHRequest(c *gin.Context) {
-	req, err := c.GetRawData()
+func HandleDOHRequest(w http.ResponseWriter, r *http.Request) {
+	req, err := io.ReadAll(r.Body)
 	if err != nil {
-		c.String(http.StatusBadRequest, "Bad Request")
+		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return
 	}
 	var msg dns.Msg
 
 	if err := msg.Unpack(req); err != nil {
-		c.String(http.StatusBadRequest, "Invalid wire format")
+		http.Error(w, "Invalid wire format", http.StatusBadRequest)
 		return
 	}
 
 	resp := upstreams.QueryUpstream(&msg)
 	if resp == nil {
-		c.String(http.StatusInternalServerError, "Upstream query failed")
+		http.Error(w, "Upstream query failed", http.StatusInternalServerError)
 		return
 	}
 
 	packedResp, err := resp.Pack()
 	if err != nil {
-		c.String(http.StatusInternalServerError, "Failed to pack response")
+		http.Error(w, "Failed to pack response", http.StatusInternalServerError)
 		return
 	}
 
-	c.Data(http.StatusOK, "application/dns-message", packedResp)
+	w.Header().Set("Content-Type", "application/dns-message")
+	w.WriteHeader(http.StatusOK)
+	w.Write(packedResp)
 }
