@@ -1,6 +1,10 @@
 package upstreams
 
-import "github.com/miekg/dns"
+import (
+	"fmt"
+
+	"github.com/miekg/dns"
+)
 
 var upstreams = []string{
 	"1.1.1.1:53", // Cloudflare
@@ -10,6 +14,7 @@ var upstreams = []string{
 
 func QueryUpstream(r *dns.Msg) *dns.Msg {
 	c := new(dns.Client)
+	fmt.Println(r.Question[0].Name)
 	for _, upstream := range upstreams {
 		resp, _, err := c.Exchange(r, upstream)
 		if err == nil && resp != nil {
