@@ -1,0 +1,24 @@
+fullchain.pem
+privkey.pem
+
+# Binaries
+*.exe
+
+# Logs
+*.log
+
+# Dependency directories
+vendor/
+
+# IDE files
+.vscode/
+
+# OS files
+.DS_Store
+
+# Build output
+/dist/
+
+# Temporary files
+*.tmp
+/tmp
