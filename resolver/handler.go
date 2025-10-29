@@ -1,48 +1,58 @@
 package resolver
 
 import (
+	"bufio"
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/miekg/dns"
 	"github.com/nikhilthakur8/advoid/upstreams"
 )
 
-var blockedDomains = map[string]bool{
-	"ad.doubleclick.net.":             true,
-	"ads.youtube.com.":                true,
-	"googleads.g.doubleclick.net.":    true,
-	"pagead.l.doubleclick.net.":       true,
-	"pubads.g.doubleclick.net.":       true,
-	"partnerad.l.doubleclick.net.":    true,
-	"adservice.google.com.":           true,
-	"adservice.google.co.in.":         true,
-	"www.googleadservices.com.":       true,
-	"gads.g.doubleclick.net.":         true,
-	"securepubads.g.doubleclick.net.": true,
-	"static.doubleclick.net.":         true,
-	"ad.doubleclick.net":              true,
-	"ads.youtube.com":                 true,
-	"googleads.g.doubleclick.net":     true,
-	"pagead.l.doubleclick.net":        true,
-	"pubads.g.doubleclick.net":        true,
-	"partnerad.l.doubleclick.net":     true,
-	"adservice.google.com":            true,
-	"adservice.google.co.in":          true,
-	"www.googleadservices.com":        true,
-	"gads.g.doubleclick.net":          true,
-	"securepubads.g.doubleclick.net":  true,
-	"static.doubleclick.net":          true,
-	"pagead2.googlesyndication.com.":  true,
-	"pagead2.googlesyndication.com":   true,
-}
+var blockedDomains map[string]bool
 
+func init() {
+	const filePath = "../oisd_big_abp.txt"
+	file, err := os.Open(filePath)
+	if err != nil {
+		return
+	}
+
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "!") || strings.HasPrefix(line, "[") {
+			continue // skip comments and metadata
+		}
+
+		// Extract domain from ||domain^ style
+		if after, ok := strings.CutPrefix(line, "||"); ok {
+			line = after
+		}
+		if idx := strings.Index(line, "^"); idx != -1 {
+			line = line[:idx]
+		}
+
+		// Skip complex patterns (regex, wildcards)
+		if strings.ContainsAny(line, "/*") {
+			continue
+		}
+
+		if line != "" {
+			blockedDomains[line] = true
+		}
+	}
+
+}
 func HandleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
 	for _, question := range r.Question {
 		log.Printf("Received query for %s\n", question.Name)
-		qname := strings.ToLower(question.Name)
+		qname := strings.ToLower(strings.TrimSuffix(question.Name, "."))
 		if blockedDomains[qname] {
 			log.Printf("Blocked domain requested: %s\n", qname)
 			m := new(dns.Msg)
@@ -78,7 +88,7 @@ func HandleDOHRequest(w http.ResponseWriter, r *http.Request) {
 
 	for _, question := range msg.Question {
 		log.Printf("Received DOH query for %s\n", question.Name)
-		qName := strings.ToLower(question.Name)
+		qName := strings.ToLower(strings.TrimSuffix(question.Name, "."))
 		if blockedDomains[qName] {
 			log.Printf("Blocked domain requested via DOH: %s\n", qName)
 			m := new(dns.Msg)
