@@ -2,14 +2,18 @@ package resolver
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/miekg/dns"
+	"github.com/nikhilthakur8/advoid/controllers"
+	"github.com/nikhilthakur8/advoid/models"
 	"github.com/nikhilthakur8/advoid/upstreams"
 )
 
@@ -55,7 +59,31 @@ func init() {
 	}
 
 }
+
+func logDNSRequest(domain, qtype, clientIP string, blocked bool, start time.Time) {
+	duration := time.Since(start).Milliseconds()
+
+	entry := models.LogDNSQuery{
+		Level:       "info",
+		Message:     "DNS Query Resolved",
+		Domain:      domain,
+		QueryType:   qtype,
+		ClientIP:    clientIP,
+		Resolver:    "DoH",
+		Blocked:     blocked,
+		ResolveTime: float64(duration),
+		Timestamp:   time.Now().UTC().Format(time.RFC3339),
+	}
+
+	go func() {
+		if err := controllers.LogDnsQuery(entry); err != nil {
+			fmt.Println("Error logging DNS query:", err)
+		}
+	}()
+}
+
 func HandleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
+	start := time.Now()
 	for _, question := range r.Question {
 		log.Printf("Received query for %s\n", question.Name)
 		qname := strings.ToLower(strings.TrimSuffix(question.Name, "."))
@@ -65,6 +93,7 @@ func HandleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
 			m.SetReply(r)
 			m.Rcode = dns.RcodeNameError
 			w.WriteMsg(m)
+			logDNSRequest(question.Name, dns.TypeToString[question.Qtype], w.RemoteAddr().String(), true, start)
 			return
 		}
 	}
@@ -77,6 +106,7 @@ func HandleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
 		return
 	}
 	w.WriteMsg(resp)
+	logDNSRequest(r.Question[0].Name, dns.TypeToString[r.Question[0].Qtype], w.RemoteAddr().String(), false, start)
 }
 
 func HandleDOHRequest(w http.ResponseWriter, r *http.Request) {
@@ -108,6 +138,7 @@ func HandleDOHRequest(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/dns-message")
 			w.WriteHeader(http.StatusOK)
 			w.Write(packedResp)
+			logDNSRequest(question.Name, dns.TypeToString[question.Qtype], r.RemoteAddr, true, time.Now())
 			return
 		}
 	}
@@ -127,4 +158,5 @@ func HandleDOHRequest(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/dns-message")
 	w.WriteHeader(http.StatusOK)
 	w.Write(packedResp)
+	logDNSRequest(msg.Question[0].Name, dns.TypeToString[msg.Question[0].Qtype], r.RemoteAddr, false, time.Now())
 }
