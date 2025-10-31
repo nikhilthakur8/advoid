@@ -52,17 +52,9 @@ func init() {
 		if line != "" {
 			blockedDomains[line] = true
 		}
-
-		// extract the root domain and block it as well
-		parts := strings.Split(line, ".")
-		if len(parts) > 2 {
-			rootDomain := strings.Join(parts[len(parts)-2:], ".")
-			blockedDomains[rootDomain] = true
-		}
 	}
+
 }
-
-
 func HandleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
 	for _, question := range r.Question {
 		log.Printf("Received query for %s\n", question.Name)
