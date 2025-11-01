@@ -3,6 +3,7 @@ package controllers
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 
@@ -12,6 +13,7 @@ import (
 func LogDnsQuery(log models.LogDNSQuery) error {
 	logTailUrl := "https://s1571226.eu-nbg-2.betterstackdata.com"
 	logTailToken := os.Getenv("BETTERSTACK_KEY")
+	fmt.Println(logTailToken)
 	if logTailToken == "" {
 		return nil
 	}
