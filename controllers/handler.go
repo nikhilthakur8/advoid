@@ -1,4 +1,4 @@
-package resolver
+package controllers
 
 import (
 	"bufio"
@@ -14,7 +14,7 @@ import (
 	"github.com/miekg/dns"
 	"github.com/nikhilthakur8/advoid/controllers"
 	"github.com/nikhilthakur8/advoid/models"
-	"github.com/nikhilthakur8/advoid/upstreams"
+	"github.com/nikhilthakur8/advoid/utils"
 )
 
 var blockedDomains = make(map[string]bool)
@@ -98,7 +98,7 @@ func HandleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
 		}
 	}
 
-	resp := upstreams.QueryUpstream(r)
+	resp := utils.QueryUpstream(r)
 	if resp == nil {
 		m := new(dns.Msg)
 		m.SetRcode(r, dns.RcodeServerFailure)
@@ -143,7 +143,7 @@ func HandleDOHRequest(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	resp := upstreams.QueryUpstream(&msg)
+	resp := utils.QueryUpstream(&msg)
 	if resp == nil {
 		http.Error(w, "Upstream query failed", http.StatusInternalServerError)
 		return

@@ -6,13 +6,13 @@ import (
 	"net/http"
 
 	"github.com/miekg/dns"
-	"github.com/nikhilthakur8/advoid/resolver"
+	"github.com/nikhilthakur8/advoid/controllers"
 )
 
 func main() {
 	log.Printf("I am running")
 
-	dns.HandleFunc(".", resolver.HandleDNSRequest)
+	dns.HandleFunc(".", controllers.HandleDNSRequest)
 
 	// We are not starting traditional DNS servers for now (Due to no server)
 	// updServer := &dns.Server{Addr: ":53", Net: "udp"}
@@ -36,7 +36,7 @@ func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
-			resolver.HandleDOHRequest(w, r)
+			controllers.HandleDOHRequest(w, r)
 			return
 		case http.MethodGet:
 			w.WriteHeader(http.StatusOK)

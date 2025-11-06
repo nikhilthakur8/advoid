@@ -1,4 +1,4 @@
-package upstreams
+package utils
 
 import (
 	"fmt"
