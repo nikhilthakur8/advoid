@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/miekg/dns"
-	"github.com/nikhilthakur8/advoid/controllers"
 	"github.com/nikhilthakur8/advoid/models"
 	"github.com/nikhilthakur8/advoid/utils"
 )
@@ -76,7 +75,7 @@ func logDNSRequest(domain, qtype, clientIP string, blocked bool, start time.Time
 	}
 
 	go func() {
-		if err := controllers.LogDnsQuery(entry); err != nil {
+		if err := LogDnsQuery(entry); err != nil {
 			fmt.Println("Error logging DNS query:", err)
 		}
 	}()
