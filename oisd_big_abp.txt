@@ -9,7 +9,7 @@
 ! License: https://github.com/sjhgvr/oisd/blob/main/LICENSE
 ! Maintainer: Stephan van Ruth
 ! Homepage: https://oisd.nl
-
+||googleads.g.doubleclick.net^
 ||0--foodwarez.da.ru^
 ||0-02.net^
 ||0.0.mastermaths.com.sg^
