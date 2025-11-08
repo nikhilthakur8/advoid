@@ -11,6 +11,7 @@
 ! Homepage: https://oisd.nl
 ||googleads.g.doubleclick.net^
 ||googleadservices.com^
+||www.googleadservices.com^
 ||ad.doubleclick.net^
 ||0--foodwarez.da.ru^
 ||0-02.net^
