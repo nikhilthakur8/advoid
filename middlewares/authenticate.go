@@ -10,44 +10,31 @@ import (
 
 func UserConfigMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		host := r.Host
 
-		// remove the Port if present
-		hostParts := strings.Split(host, ":")
-		hostName := hostParts[0]
+		// Example path: /1234/dns-query or /1234
+		path := strings.TrimPrefix(r.URL.Path, "/") // remove leading "/"
 
-		// spilt the host into parts to get the userId
-
-		parts := strings.Split(hostName, ".")
-
-		// CASES
-		// 1. 1.dns.clouly.in  // userId specified
-		// 2. dns.clouly.in // generic access
-
-		if len(parts) < 3 {
-			http.Error(w, "Invalid host format", http.StatusBadRequest)
-			return
-		}
-
-		// General access
-		if len(parts) == 3 {
+		if path == "" {
 			next.ServeHTTP(w, r)
 			return
 		}
 
-		userId := parts[0]
+		// Extract first segment (user id)
+		parts := strings.Split(path, "/")
+		userID := parts[0]
 
-		userConfig, err := services.GetUserConfigFromCache(userId)
-
+		// Load user config
+		userConfig, err := services.GetUserConfigFromCache(userID)
 		if err != nil {
+			// User not found fallback to generic
 			next.ServeHTTP(w, r)
 			return
 		}
 
+		// Attach userConfig to context
 		ctx := context.WithValue(r.Context(), "userConfig", userConfig)
 		r = r.WithContext(ctx)
 
 		next.ServeHTTP(w, r)
-
 	})
 }
