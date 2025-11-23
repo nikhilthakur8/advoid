@@ -11,8 +11,7 @@ type item struct {
 }
 
 type TTLCache struct {
-	data   map[string]item
-	mu     sync.RWMutex
+	data   sync.Map
 	ticker *time.Ticker
 }
 
@@ -26,14 +25,13 @@ func GetCacheInstance() *TTLCache {
 	return cacheInstance
 }
 
-// It will create a new TTL cache with the specified cleanup interval.
+// NewTTLCache creates a TTL cache with periodic cleanup
 func NewTTLCache(cleanUpInterval time.Duration) *TTLCache {
 	cache := &TTLCache{
-		data:   make(map[string]item),
 		ticker: time.NewTicker(cleanUpInterval),
 	}
 
-	// This goroutine will periodically clean up expired items.
+	// Cleanup routine
 	go func() {
 		for range cache.ticker.C {
 			cache.cleanup()
@@ -43,46 +41,39 @@ func NewTTLCache(cleanUpInterval time.Duration) *TTLCache {
 	return cache
 }
 
+// Set inserts/updates a key with TTL
 func (c *TTLCache) Set(key string, value any, ttl time.Duration) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.data[key] = item{
+	c.data.Store(key, item{
 		value:     value,
 		expiresAt: time.Now().Add(ttl).UnixNano(),
-	}
+	})
 }
 
-// Get retrieves an item from the cache and refreshes its TTL if found and not expired.
+// Get retrieves an item + refreshes TTL (5 minutes) if valid
 func (c *TTLCache) Get(key string) (any, bool) {
-	c.mu.RLock()
-	it, found := c.data[key]
-	c.mu.RUnlock()
-
-	if !found || time.Now().UnixNano() > it.expiresAt {
+	v, ok := c.data.Load(key)
+	if !ok {
 		return nil, false
 	}
 
-	// Refresh TTL optimistically under read lock.
-	c.mu.Lock()
-	// double-check if still valid after lock switch
-	it2, stillFound := c.data[key]
-	if stillFound && time.Now().UnixNano() <= it2.expiresAt {
-		it2.expiresAt = time.Now().Add(5 * time.Minute).UnixNano()
-		c.data[key] = it2
-	}
-	c.mu.Unlock()
+	it := v.(item)
+
+	// refresh TTL to EXACTLY 1 minute
+	it.expiresAt = time.Now().Add(1 * time.Minute).UnixNano()
+	c.data.Store(key, it)
 
 	return it.value, true
 }
 
+// cleanup removes expired keys
 func (c *TTLCache) cleanup() {
 	now := time.Now().UnixNano()
-	c.mu.Lock()
-	defer c.mu.Unlock()
 
-	for key, it := range c.data {
+	c.data.Range(func(key, value any) bool {
+		it := value.(item)
 		if now > it.expiresAt {
-			delete(c.data, key)
+			c.data.Delete(key)
 		}
-	}
+		return true
+	})
 }
