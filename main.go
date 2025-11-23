@@ -5,9 +5,15 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/joho/godotenv"
 	"github.com/miekg/dns"
 	"github.com/nikhilthakur8/advoid/controllers"
+	"github.com/nikhilthakur8/advoid/middlewares"
 )
+
+func init() {
+	godotenv.Load(".env")
+}
 
 func main() {
 	log.Printf("I am running")
@@ -18,32 +24,20 @@ func main() {
 	// updServer := &dns.Server{Addr: ":53", Net: "udp"}
 	// tcpServer := &dns.Server{Addr: ":53", Net: "tcp"}
 
-	// go func() {
-	// 	log.Printf("Starting DNS server on :53(udp)")
-	// 	if err := updServer.ListenAndServe(); err != nil {
-	// 		log.Fatalf("Failed to start server: %v\n", err)
-	// 	}
-	// }()
-
-	// go func() {
-	// 	log.Printf("Starting DNS server on :53(tcp)")
-	// 	if err := tcpServer.ListenAndServe(); err != nil {
-	// 		log.Fatalf("Failed to start server: %v\n", err)
-	// 	}
-	// }()
-
 	// DNS over HTTPS server
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+
+	dohHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
 			controllers.HandleDOHRequest(w, r)
-			return
 		case http.MethodGet:
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("Hello from Nikhil Thakur"))
-			return
+			http.ServeFile(w, r, "index.html")
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
+
+	http.HandleFunc("/", middlewares.UserConfigMiddleware(dohHandler))
 
 	// DNS over TLS server
 	cert, err := tls.LoadX509KeyPair("fullchain.pem", "privkey.pem")
@@ -58,6 +52,20 @@ func main() {
 		Net:       "tcp-tls",
 		TLSConfig: tlsConfig,
 	}
+
+	// go func() {
+	// 	log.Printf("Starting DNS server on :53(udp)")
+	// 	if err := updServer.ListenAndServe(); err != nil {
+	// 		log.Fatalf("Failed to start server: %v\n", err)
+	// 	}
+	// }()
+
+	// go func() {
+	// 	log.Printf("Starting DNS server on :53(tcp)")
+	// 	if err := tcpServer.ListenAndServe(); err != nil {
+	// 		log.Fatalf("Failed to start server: %v\n", err)
+	// 	}
+	// }()
 
 	go func() {
 		log.Println("Starting DoT server on :853")

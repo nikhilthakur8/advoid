@@ -2,20 +2,19 @@ package controllers
 
 import (
 	"bufio"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/miekg/dns"
-	"github.com/nikhilthakur8/advoid/models"
+	"github.com/nikhilthakur8/advoid/definitions"
 	"github.com/nikhilthakur8/advoid/utils"
 )
 
+// This is the list of blocked domains loaded from the blocklist file
 var blockedDomains = make(map[string]bool)
 
 func init() {
@@ -56,47 +55,68 @@ func init() {
 			blockedDomains[line] = true
 		}
 	}
-
 }
 
-func logDNSRequest(domain, qtype, clientIP string, blocked bool, start time.Time) {
-	duration := time.Since(start).Milliseconds()
-
-	entry := models.LogDNSQuery{
-		Level:       "info",
-		Message:     "DNS Query Resolved",
-		Domain:      domain,
-		QueryType:   qtype,
-		ClientIP:    clientIP,
-		Resolver:    "DoH",
-		Blocked:     blocked,
-		ResolveTime: float64(duration),
-		Timestamp:   time.Now().UTC().Format(time.RFC3339),
-	}
-
-	go func() {
-		if err := LogDnsQuery(entry); err != nil {
-			fmt.Println("Error logging DNS query:", err)
+func CheckIsDomainInDenyList(domain string, userConfig definitions.UserConfig) bool {
+	for _, i := range userConfig.DenyList {
+		if i.Active == false {
+			continue
 		}
-	}()
+		deny := strings.ToLower(strings.TrimSpace(i.Domain))
+		if domain == deny {
+			return true
+		}
+		if strings.HasSuffix(domain, "."+deny) {
+			return true
+		}
+	}
+	return false
+}
+
+func CheckIsDomainInAllowList(domain string, userConfig definitions.UserConfig) bool {
+	for _, i := range userConfig.AllowList {
+		if i.Active == false {
+			continue
+		}
+		allow := strings.ToLower(strings.TrimSpace(i.Domain))
+		if domain == allow {
+			return true
+		}
+
+		if strings.HasSuffix(domain, "."+allow) {
+			return true
+		}
+	}
+	return false
+}
+
+func CheckForBlockedDomain(questions []dns.Question, userConfig definitions.UserConfig) bool {
+	for _, question := range questions {
+		domain := strings.ToLower(strings.TrimSuffix(question.Name, "."))
+		if blockedDomains[domain] {
+			return true
+		}
+
+		if CheckIsDomainInDenyList(domain, userConfig) {
+			return true
+		}
+
+		if CheckIsDomainInAllowList(domain, userConfig) {
+			return false
+		}
+
+	}
+	return false
 }
 
 func HandleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
-	start := time.Now()
-	for _, question := range r.Question {
-		log.Printf("Received query for %s\n", question.Name)
-		qname := strings.ToLower(strings.TrimSuffix(question.Name, "."))
-		if blockedDomains[qname] {
-			log.Printf("Blocked domain requested: %s\n", qname)
-			m := new(dns.Msg)
-			m.SetReply(r)
-			m.Rcode = dns.RcodeNameError
-			w.WriteMsg(m)
-			logDNSRequest(question.Name, dns.TypeToString[question.Qtype], w.RemoteAddr().String(), true, start)
-			return
-		}
+	if CheckForBlockedDomain(r.Question, definitions.UserConfig{}) {
+		m := new(dns.Msg)
+		m.SetReply(r)
+		m.Rcode = dns.RcodeNameError
+		w.WriteMsg(m)
+		return
 	}
-
 	resp := utils.QueryUpstream(r)
 	if resp == nil {
 		m := new(dns.Msg)
@@ -105,10 +125,20 @@ func HandleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
 		return
 	}
 	w.WriteMsg(resp)
-	logDNSRequest(r.Question[0].Name, dns.TypeToString[r.Question[0].Qtype], w.RemoteAddr().String(), false, start)
 }
 
 func HandleDOHRequest(w http.ResponseWriter, r *http.Request) {
+
+	// Get Context Value of userConfig
+	ctxValue := r.Context().Value("userConfig")
+
+	var userConfig definitions.UserConfig
+	if ctxValue != nil {
+		if uc, ok := ctxValue.(definitions.UserConfig); ok {
+			userConfig = uc
+		}
+	}
+
 	req, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
@@ -121,25 +151,20 @@ func HandleDOHRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, question := range msg.Question {
-		log.Printf("Received DOH query for %s\n", question.Name)
-		qName := strings.ToLower(strings.TrimSuffix(question.Name, "."))
-		if blockedDomains[qName] {
-			log.Printf("Blocked domain requested via DOH: %s\n", qName)
-			m := new(dns.Msg)
-			m.SetReply(&msg)
-			m.Rcode = dns.RcodeNameError
-			packedResp, err := m.Pack()
-			if err != nil {
-				http.Error(w, "Failed to pack response", http.StatusInternalServerError)
-				return
-			}
-			w.Header().Set("Content-Type", "application/dns-message")
-			w.WriteHeader(http.StatusOK)
-			w.Write(packedResp)
-			logDNSRequest(question.Name, dns.TypeToString[question.Qtype], r.RemoteAddr, true, time.Now())
+	if CheckForBlockedDomain(msg.Question, userConfig) {
+		log.Printf("Blocked domain requested via DOH: %v", msg.Question[0].Name)
+		m := new(dns.Msg)
+		m.SetReply(&msg)
+		m.Rcode = dns.RcodeNameError
+		packedResp, err := m.Pack()
+		if err != nil {
+			http.Error(w, "Failed to pack response", http.StatusInternalServerError)
 			return
 		}
+		w.Header().Set("Content-Type", "application/dns-message")
+		w.WriteHeader(http.StatusOK)
+		w.Write(packedResp)
+		return
 	}
 
 	resp := utils.QueryUpstream(&msg)
@@ -157,5 +182,5 @@ func HandleDOHRequest(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/dns-message")
 	w.WriteHeader(http.StatusOK)
 	w.Write(packedResp)
-	logDNSRequest(msg.Question[0].Name, dns.TypeToString[msg.Question[0].Qtype], r.RemoteAddr, false, time.Now())
+
 }

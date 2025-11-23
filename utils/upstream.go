@@ -7,9 +7,10 @@ import (
 )
 
 var upstreams = []string{
-	"1.1.1.1:53", // Cloudflare
-	"8.8.8.8:53", // Google
-	"9.9.9.9:53", // Quad9
+	"103.118.118.14:53", // Local ISP DNs remove that later
+	"1.1.1.1:53",        // Cloudflare
+	"8.8.8.8:53",        // Google
+	"9.9.9.9:53",        // Quad9
 }
 
 func QueryUpstream(r *dns.Msg) *dns.Msg {

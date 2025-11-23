@@ -3,9 +3,10 @@ privkey.pem
 
 # Binaries
 *.exe
-
+.env
 # Logs
 *.log
+goal.txt
 
 # Dependency directories
 vendor/
@@ -22,3 +23,6 @@ vendor/
 # Temporary files
 *.tmp
 /tmp
+
+/fullchain.pem
+/privkey.pem
