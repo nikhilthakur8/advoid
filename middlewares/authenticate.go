@@ -30,16 +30,15 @@ func UserConfigMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		// General access
-		// if len(parts) == 3 {
-		// 	next.ServeHTTP(w, r)
-		// 	return
-		// }
+		if len(parts) == 3 {
+			next.ServeHTTP(w, r)
+			return
+		}
 
-		// userId := parts[0]
-		userId := "2"
+		userId := parts[0]
 
 		userConfig, err := services.GetUserConfigFromCache(userId)
-		
+
 		if err != nil {
 			next.ServeHTTP(w, r)
 			return
