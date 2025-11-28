@@ -83,7 +83,7 @@ func main() {
 	}()
 
 	// subcribe to the redis channel for user config updates
-	subscriber.SubscribeToUserConfigUpdatesRedisChannel()
+	go subscriber.SubscribeToUserConfigUpdatesRedisChannel()
 
 	select {}
 }
