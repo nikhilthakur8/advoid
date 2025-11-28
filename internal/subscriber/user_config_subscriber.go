@@ -2,6 +2,7 @@ package subscriber
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -15,6 +16,9 @@ var ctx = context.Background()
 func SubscribeToUserConfigUpdatesRedisChannel() {
 
 	opt, _ := redis.ParseURL(os.Getenv("REDIS_URI"))
+	opt.TLSConfig = &tls.Config{
+		InsecureSkipVerify: true,
+	}
 	rdb := redis.NewClient(opt)
 
 	_, err := rdb.Ping(ctx).Result()
