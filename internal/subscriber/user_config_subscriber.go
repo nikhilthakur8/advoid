@@ -42,6 +42,7 @@ func SubscribeToUserConfigUpdatesRedisChannel() {
 				fmt.Printf("Error unmarshaling message: %v\n", err)
 				continue
 			}
+			fmt.Println("Received user config update for user ID:", userId.UserID)
 			go services.InvalidateUserConfigCache(strconv.Itoa(userId.UserID))
 		}
 	}()
