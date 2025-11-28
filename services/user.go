@@ -72,3 +72,11 @@ func GetUserConfigFromCache(userId string) (definitions.UserConfig, error) {
 
 	return userConfig, nil
 }
+
+func InvalidateUserConfigCache(userId string) {
+	// Get cache instance
+	cache := utils.GetCacheInstance()
+	key := "USER_CONFIG_" + userId
+	cache.Delete(key)
+	GetUserConfigFromCache(userId)
+}

@@ -65,6 +65,10 @@ func (c *TTLCache) Get(key string) (any, bool) {
 	return it.value, true
 }
 
+func (c *TTLCache) Delete(key string) {
+	c.data.Delete(key)
+}
+
 // cleanup removes expired keys
 func (c *TTLCache) cleanup() {
 	now := time.Now().UnixNano()

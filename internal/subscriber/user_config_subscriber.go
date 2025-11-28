@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/nikhilthakur8/advoid/services"
 	"github.com/redis/go-redis/v9"
@@ -41,7 +42,7 @@ func SubscribeToUserConfigUpdatesRedisChannel() {
 				fmt.Printf("Error unmarshaling message: %v\n", err)
 				continue
 			}
-			go services.GetUserConfigFromServer(fmt.Sprintf("%d", userId.UserID))
+			go services.InvalidateUserConfigCache(strconv.Itoa(userId.UserID))
 		}
 	}()
 
