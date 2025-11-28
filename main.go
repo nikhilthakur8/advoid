@@ -8,6 +8,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/miekg/dns"
 	"github.com/nikhilthakur8/advoid/controllers"
+	"github.com/nikhilthakur8/advoid/internal/subscriber"
 	"github.com/nikhilthakur8/advoid/middlewares"
 )
 
@@ -80,6 +81,9 @@ func main() {
 			log.Fatalf("Failed to start DoH server: %v", err)
 		}
 	}()
+
+	// subcribe to the redis channel for user config updates
+	subscriber.SubscribeToUserConfigUpdatesRedisChannel()
 
 	select {}
 }

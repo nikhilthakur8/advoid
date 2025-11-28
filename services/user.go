@@ -2,10 +2,7 @@ package services
 
 import (
 	"encoding/json"
-	"errors"
-	"io"
 	"log"
-	"net/http"
 	"time"
 
 	"github.com/nikhilthakur8/advoid/config"
@@ -17,52 +14,7 @@ type BodyData struct {
 	Data definitions.UserConfig `json:"data"`
 }
 
-func MakeAPIRequest(reqURI string, header map[string]string, method string) ([]byte, error) {
-	// Create HTTP client and request
-	client := &http.Client{}
-
-	// Create HTTP request
-	req, err := http.NewRequest(method, reqURI, nil)
-
-	// Check for errors in creating the request
-	if err != nil {
-		return nil, err
-	}
-
-	// Set headers for the request
-	for key, value := range header {
-		req.Header.Set(key, value)
-	}
-
-	resp, err := client.Do(req)
-
-	// Check for errors in making the request
-	if err != nil {
-		return nil, err
-	}
-
-	// Ensure the response body is closed after reading
-	defer resp.Body.Close()
-
-	// Check for non-200 status codes
-	if resp.StatusCode != 200 {
-		return nil, errors.New("API request failed with status code: " + resp.Status)
-	}
-
-	// Read the response body in bytes
-	respData, err := io.ReadAll(resp.Body)
-
-	// Check for errors in reading the response body
-	if err != nil {
-		log.Println("Error reading response body:", err)
-		return nil, err
-	}
-
-	// Return the response data and no error
-	return respData, nil
-}
-
-func getUserConfigFromServer(userId string) (definitions.UserConfig, error) {
+func GetUserConfigFromServer(userId string) (definitions.UserConfig, error) {
 
 	// Make a HTTP Client Request to fetch user config
 	reqURI := config.GetEnv("BACKEND_URI") + "/admin/user-configs/" + userId
@@ -72,7 +24,7 @@ func getUserConfigFromServer(userId string) (definitions.UserConfig, error) {
 	}
 
 	// Make the API request to fetch user config
-	resBytes, err := MakeAPIRequest(reqURI, header, "GET")
+	resBytes, err := utils.MakeAPIRequest(reqURI, header, "GET")
 
 	// Check for errors in making the API request
 	if err != nil {
@@ -109,7 +61,7 @@ func GetUserConfigFromCache(userId string) (definitions.UserConfig, error) {
 	}
 
 	// If not found in cache, fetch from server
-	userConfig, err := getUserConfigFromServer(userId)
+	userConfig, err := GetUserConfigFromServer(userId)
 
 	if err != nil {
 		return definitions.UserConfig{}, err
