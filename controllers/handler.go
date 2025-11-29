@@ -2,6 +2,8 @@ package controllers
 
 import (
 	"bufio"
+	"crypto/tls"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -11,6 +13,7 @@ import (
 
 	"github.com/miekg/dns"
 	"github.com/nikhilthakur8/advoid/definitions"
+	"github.com/nikhilthakur8/advoid/services"
 	"github.com/nikhilthakur8/advoid/utils"
 )
 
@@ -110,7 +113,23 @@ func CheckForBlockedDomain(questions []dns.Question, userConfig definitions.User
 }
 
 func HandleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
-	if CheckForBlockedDomain(r.Question, definitions.UserConfig{}) {
+	// This controller for DNS over TLS (DoT) requests
+
+	var userConfig definitions.UserConfig
+
+	if tw, ok := w.(interface{ TLSConnection() *tls.Conn }); ok {
+		conn := tw.TLSConnection()
+		cs := conn.ConnectionState()
+		sniHostname := cs.ServerName
+		sniHostnameList := strings.Split(sniHostname, ",")
+
+		fmt.Println("Suspicious SNI Hostname:", sniHostname)
+		if len(sniHostnameList) > 3 {
+			userConfig, _ = services.GetUserConfigFromCache(sniHostnameList[0])
+		}
+	}
+
+	if CheckForBlockedDomain(r.Question, userConfig) {
 		m := new(dns.Msg)
 		m.SetReply(r)
 		m.Rcode = dns.RcodeNameError
