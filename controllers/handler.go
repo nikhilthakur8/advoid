@@ -3,7 +3,6 @@ package controllers
 import (
 	"bufio"
 	"crypto/tls"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/miekg/dns"
 	"github.com/nikhilthakur8/advoid/definitions"
+	"github.com/nikhilthakur8/advoid/services"
 	"github.com/nikhilthakur8/advoid/utils"
 )
 
@@ -114,10 +114,15 @@ func CheckForBlockedDomain(questions []dns.Question, userConfig definitions.User
 func HandleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
 	var userConfig definitions.UserConfig
 
+	// extracting SNI(server name indication) from the tls connection (Gemini)
 	if tlsWriter, ok := w.(interface{ ConnectionState() *tls.ConnectionState }); ok {
 		state := tlsWriter.ConnectionState()
 		sni := state.ServerName
-		fmt.Println("SNI:", sni)
+		sniParts := strings.Split(sni, ".")
+		if len(sniParts) > 3 {
+			userId := sniParts[0]
+			userConfig, _ = services.GetUserConfigFromCache(userId)
+		}
 	}
 
 	if CheckForBlockedDomain(r.Question, userConfig) {
