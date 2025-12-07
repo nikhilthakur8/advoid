@@ -32,7 +32,7 @@ func main() {
 		case http.MethodPost:
 			controllers.HandleDOHRequest(w, r)
 		case http.MethodGet:
-			http.ServeFile(w, r, "index.html")
+			http.Redirect(w, r, "https://next.clouly.in", http.StatusMovedPermanently)
 		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
