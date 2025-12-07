@@ -95,6 +95,12 @@ func CheckIsDomainInAllowList(domain string, userConfig definitions.UserConfig) 
 func CheckForBlockedDomain(questions []dns.Question, userConfig definitions.UserConfig) bool {
 	for _, question := range questions {
 		domain := strings.ToLower(strings.TrimSuffix(question.Name, "."))
+
+		// Allow List have higher priority than Deny List and Blocklist
+		if CheckIsDomainInAllowList(domain, userConfig) {
+			return false
+		}
+
 		if blockedDomains[domain] {
 			return true
 		}
@@ -102,11 +108,6 @@ func CheckForBlockedDomain(questions []dns.Question, userConfig definitions.User
 		if CheckIsDomainInDenyList(domain, userConfig) {
 			return true
 		}
-
-		if CheckIsDomainInAllowList(domain, userConfig) {
-			return false
-		}
-
 	}
 	return false
 }
