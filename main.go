@@ -21,7 +21,7 @@ func main() {
 	// updServer := &dns.Server{Addr: ":53", Net: "udp"}
 	// tcpServer := &dns.Server{Addr: ":53", Net: "tcp"}
 
-	// DNS over HTTPS server
+	// DNS over HTTPS server 
 
 	dohHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
