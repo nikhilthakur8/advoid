@@ -24,7 +24,7 @@ func GetUserConfigFromServer(userId string) (definitions.UserConfig, error) {
 	}
 
 	// Make the API request to fetch user config
-	resBytes, err := utils.MakeAPIRequest(reqURI, header, "GET")
+	resBytes, err := utils.MakeAPIRequest(reqURI, header, "GET", nil)
 
 	// Check for errors in making the API request
 	if err != nil {

@@ -1,0 +1,12 @@
+version: "3.8"
+
+services:
+    advoid:
+        build: .
+        container_name: advoid
+        ports:
+            - "853:853"
+            - "8053:8053"
+        restart: always
+        env_file:
+            - .env

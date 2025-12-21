@@ -5,14 +5,17 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"time"
 )
 
-func MakeAPIRequest(reqURI string, header map[string]string, method string) ([]byte, error) {
+func MakeAPIRequest(reqURI string, header map[string]string, method string, data io.Reader) ([]byte, error) {
 	// Create HTTP client and request
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
 
 	// Create HTTP request
-	req, err := http.NewRequest(method, reqURI, nil)
+	req, err := http.NewRequest(method, reqURI, data)
 
 	// Check for errors in creating the request
 	if err != nil {

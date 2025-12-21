@@ -4,17 +4,13 @@ import (
 	"crypto/tls"
 	"log"
 	"net/http"
+	"os"
 
-	"github.com/joho/godotenv"
 	"github.com/miekg/dns"
 	"github.com/nikhilthakur8/advoid/controllers"
 	"github.com/nikhilthakur8/advoid/internal/subscriber"
 	"github.com/nikhilthakur8/advoid/middlewares"
 )
-
-func init() {
-	godotenv.Load(".env")
-}
 
 func main() {
 	log.Printf("I am running")
@@ -41,7 +37,9 @@ func main() {
 	http.HandleFunc("/", middlewares.UserConfigMiddleware(dohHandler))
 
 	// DNS over TLS server
-	cert, err := tls.LoadX509KeyPair("fullchain.pem", "privkey.pem")
+	fullChain := os.Getenv("FULLCHAIN")
+	privKey := os.Getenv("PRIVATE_KEY")
+	cert, err := tls.X509KeyPair([]byte(fullChain), []byte(privKey))
 	if err != nil {
 		log.Fatalf("DOT is not working")
 	}
