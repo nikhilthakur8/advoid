@@ -52,19 +52,19 @@ func main() {
 		TLSConfig: tlsConfig,
 	}
 
-	// go func() {
-	// 	log.Printf("Starting DNS server on :53(udp)")
-	// 	if err := updServer.ListenAndServe(); err != nil {
-	// 		log.Fatalf("Failed to start server: %v\n", err)
-	// 	}
-	// }()
+	go func() {
+		log.Printf("Starting DNS server on :53(udp)")
+		if err := updServer.ListenAndServe(); err != nil {
+			log.Fatalf("Failed to start server: %v\n", err)
+		}
+	}()
 
-	// go func() {
-	// 	log.Printf("Starting DNS server on :53(tcp)")
-	// 	if err := tcpServer.ListenAndServe(); err != nil {
-	// 		log.Fatalf("Failed to start server: %v\n", err)
-	// 	}
-	// }()
+	go func() {
+		log.Printf("Starting DNS server on :53(tcp)")
+		if err := tcpServer.ListenAndServe(); err != nil {
+			log.Fatalf("Failed to start server: %v\n", err)
+		}
+	}()
 
 	go func() {
 		log.Println("Starting DoT server on :853")
