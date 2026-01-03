@@ -18,10 +18,10 @@ func main() {
 	dns.HandleFunc(".", controllers.HandleDNSRequest)
 
 	// We are not starting traditional DNS servers for now (Due to no server)
-	// updServer := &dns.Server{Addr: ":53", Net: "udp"}
-	// tcpServer := &dns.Server{Addr: ":53", Net: "tcp"}
+	updDNSServer := &dns.Server{Addr: ":53", Net: "udp"}
+	tcpDNSServer := &dns.Server{Addr: ":53", Net: "tcp"}
 
-	// DNS over HTTPS server 
+	// DNS over HTTPS server
 
 	dohHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
@@ -54,14 +54,14 @@ func main() {
 
 	go func() {
 		log.Printf("Starting DNS server on :53(udp)")
-		if err := updServer.ListenAndServe(); err != nil {
+		if err := updDNSServer.ListenAndServe(); err != nil {
 			log.Fatalf("Failed to start server: %v\n", err)
 		}
 	}()
 
 	go func() {
 		log.Printf("Starting DNS server on :53(tcp)")
-		if err := tcpServer.ListenAndServe(); err != nil {
+		if err := tcpDNSServer.ListenAndServe(); err != nil {
 			log.Fatalf("Failed to start server: %v\n", err)
 		}
 	}()
