@@ -118,11 +118,13 @@ func HandleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
 	// extracting SNI(server name indication) from the tls connection (Gemini)
 	if tlsWriter, ok := w.(interface{ ConnectionState() *tls.ConnectionState }); ok {
 		state := tlsWriter.ConnectionState()
-		sni := state.ServerName
-		sniParts := strings.Split(sni, ".")
-		if len(sniParts) > 3 {
-			userId := sniParts[0]
-			userConfig, _ = services.GetUserConfigFromCache(userId)
+		if state != nil && state.ServerName != "" {
+			sni := state.ServerName
+			sniParts := strings.Split(sni, ".")
+			if len(sniParts) > 3 {
+				userId := sniParts[0]
+				userConfig, _ = services.GetUserConfigFromCache(userId)
+			}
 		}
 	}
 
