@@ -129,6 +129,7 @@ func HandleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
 	}
 
 	if CheckForBlockedDomain(r.Question, userConfig) {
+		log.Printf("Blocked domain requested via DOH: %v", r.Question[0].Name)
 		m := new(dns.Msg)
 		m.SetReply(r)
 		m.Rcode = dns.RcodeNameError
