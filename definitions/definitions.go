@@ -15,8 +15,8 @@ type UserConfig struct {
 
 type DNSLog struct {
 	Timestamp time.Time `json:"timestamp"`
-	UserId    *string   `json:"userId"`
+	UserId    int       `json:"userId"`
 	Domain    string    `json:"domain"`
 	Type      string    `json:"type"`
-	Action    string    `json:"action"`
+	Action    bool      `json:"action"`
 }

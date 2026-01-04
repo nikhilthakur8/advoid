@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -77,16 +78,19 @@ func checkInList(domain string, list []definitions.Rule) bool {
 }
 
 func CheckForBlockedDomain(questions []dns.Question, userConfig definitions.UserConfig) bool {
+	userId, err := strconv.Atoi(*userConfig.UserId)
+	if err != nil || userId < 0 {
+		userId = 0
+	}
 	for _, question := range questions {
 		domain := strings.ToLower(strings.TrimSuffix(question.Name, "."))
-
 		// Allow List have higher priority than Deny List and Blocklist
 		if checkInList(domain, userConfig.AllowList) {
 			dnsLogs := definitions.DNSLog{
 				Timestamp: time.Now(),
 				Domain:    question.Name,
-				UserId:    nil,
-				Action:    "Blocked",
+				UserId:    userId,
+				Action:    false,
 				Type:      dns.TypeToString[question.Qtype],
 			}
 			logger.EmitLogs(dnsLogs)
@@ -98,8 +102,8 @@ func CheckForBlockedDomain(questions []dns.Question, userConfig definitions.User
 			dnsLogs := definitions.DNSLog{
 				Timestamp: time.Now(),
 				Domain:    question.Name,
-				UserId:    userConfig.UserId,
-				Action:    "Blocked",
+				UserId:    userId,
+				Action:    true,
 				Type:      dns.TypeToString[question.Qtype],
 			}
 			logger.EmitLogs(dnsLogs)
@@ -111,8 +115,8 @@ func CheckForBlockedDomain(questions []dns.Question, userConfig definitions.User
 	dnsLogs := definitions.DNSLog{
 		Timestamp: time.Now(),
 		Domain:    questions[0].Name,
-		UserId:    userConfig.UserId,
-		Action:    "Allowed",
+		UserId:    userId,
+		Action:    true,
 		Type:      dns.TypeToString[questions[0].Qtype],
 	}
 	logger.EmitLogs(dnsLogs)
