@@ -1,116 +1,18 @@
 package controllers
 
 import (
-	"bufio"
 	"crypto/tls"
 	"io"
 	"log"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/miekg/dns"
 	"github.com/nikhilthakur8/advoid/definitions"
+	"github.com/nikhilthakur8/advoid/internal/filters"
 	"github.com/nikhilthakur8/advoid/services"
 	"github.com/nikhilthakur8/advoid/utils"
 )
-
-// This is the list of blocked domains loaded from the blocklist file
-var blockedDomains = make(map[string]bool)
-
-func init() {
-	cwd, err := os.Getwd()
-	if err != nil {
-		log.Fatalf("Failed to get current directory: %v", err)
-	}
-	filePath := filepath.Join(cwd, "oisd_big_abp.txt")
-
-	file, err := os.Open(filePath)
-	if err != nil {
-		log.Printf("Error opening blocklist file: %v\n", err)
-		return
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "!") || strings.HasPrefix(line, "[") {
-			continue // skip comments and metadata
-		}
-
-		// Extract domain from ||domain^ style
-		if after, ok := strings.CutPrefix(line, "||"); ok {
-			line = after
-		}
-		if idx := strings.Index(line, "^"); idx != -1 {
-			line = line[:idx]
-		}
-
-		// Skip complex patterns (regex, wildcards)
-		if strings.ContainsAny(line, "/*") {
-			continue
-		}
-
-		if line != "" {
-			blockedDomains[line] = true
-		}
-	}
-}
-
-func CheckIsDomainInDenyList(domain string, userConfig definitions.UserConfig) bool {
-	for _, i := range userConfig.DenyList {
-		if i.Active == false {
-			continue
-		}
-		deny := strings.ToLower(strings.TrimSpace(i.Domain))
-		if domain == deny {
-			return true
-		}
-		if strings.HasSuffix(domain, "."+deny) {
-			return true
-		}
-	}
-	return false
-}
-
-func CheckIsDomainInAllowList(domain string, userConfig definitions.UserConfig) bool {
-	for _, i := range userConfig.AllowList {
-		if i.Active == false {
-			continue
-		}
-		allow := strings.ToLower(strings.TrimSpace(i.Domain))
-		if domain == allow {
-			return true
-		}
-
-		if strings.HasSuffix(domain, "."+allow) {
-			return true
-		}
-	}
-	return false
-}
-
-func CheckForBlockedDomain(questions []dns.Question, userConfig definitions.UserConfig) bool {
-	for _, question := range questions {
-		domain := strings.ToLower(strings.TrimSuffix(question.Name, "."))
-
-		// Allow List have higher priority than Deny List and Blocklist
-		if CheckIsDomainInAllowList(domain, userConfig) {
-			return false
-		}
-
-		if blockedDomains[domain] {
-			return true
-		}
-
-		if CheckIsDomainInDenyList(domain, userConfig) {
-			return true
-		}
-	}
-	return false
-}
 
 func HandleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
 	var userConfig definitions.UserConfig
@@ -128,8 +30,8 @@ func HandleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
 		}
 	}
 
-	if CheckForBlockedDomain(r.Question, userConfig) {
-		log.Printf("Blocked domain requested via DOH: %v", r.Question[0].Name)
+	if filters.CheckForBlockedDomain(r.Question, userConfig) {
+		log.Printf("Blocked domain requested via DOT: %v", r.Question[0].Name)
 		m := new(dns.Msg)
 		m.SetReply(r)
 		m.Rcode = dns.RcodeNameError
@@ -172,7 +74,7 @@ func HandleDOHRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if CheckForBlockedDomain(msg.Question, userConfig) {
+	if filters.CheckForBlockedDomain(msg.Question, userConfig) {
 		log.Printf("Blocked domain requested via DOH: %v", msg.Question[0].Name)
 		m := new(dns.Msg)
 		m.SetReply(&msg)
