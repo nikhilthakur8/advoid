@@ -8,9 +8,9 @@ type Rule struct {
 }
 
 type UserConfig struct {
-	UserId    *string `json:"userId"`
-	AllowList []Rule  `json:"allowList"`
-	DenyList  []Rule  `json:"denyList"`
+	UserId    int    `json:"userId"`
+	AllowList []Rule `json:"allowList"`
+	DenyList  []Rule `json:"denyList"`
 }
 
 type DNSLog struct {
