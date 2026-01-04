@@ -6,9 +6,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/miekg/dns"
 	"github.com/nikhilthakur8/advoid/definitions"
+	"github.com/nikhilthakur8/advoid/internal/logger"
 )
 
 // This is the list of blocked domains loaded from the blocklist file
@@ -60,7 +62,6 @@ func checkInList(domain string, list []definitions.Rule) bool {
 			continue
 		}
 
-		
 		cleanRuleDomain := strings.ToLower(strings.TrimSpace(i.Domain))
 		if domain == cleanRuleDomain {
 			return true
@@ -81,14 +82,40 @@ func CheckForBlockedDomain(questions []dns.Question, userConfig definitions.User
 
 		// Allow List have higher priority than Deny List and Blocklist
 		if checkInList(domain, userConfig.AllowList) {
+			dnsLogs := definitions.DNSLog{
+				Timestamp: time.Now(),
+				Domain:    question.Name,
+				UserId:    nil,
+				Action:    "Blocked",
+				Type:      dns.TypeToString[question.Qtype],
+			}
+			logger.EmitLogs(dnsLogs)
 			return false
 		}
 
 		// if domain is in blocklist or deny list, block it
 		if blockedDomains[domain] || checkInList(domain, userConfig.DenyList) {
+			dnsLogs := definitions.DNSLog{
+				Timestamp: time.Now(),
+				Domain:    question.Name,
+				UserId:    userConfig.UserId,
+				Action:    "Blocked",
+				Type:      dns.TypeToString[question.Qtype],
+			}
+			logger.EmitLogs(dnsLogs)
 			return true
 		}
 
 	}
+
+	dnsLogs := definitions.DNSLog{
+		Timestamp: time.Now(),
+		Domain:    questions[0].Name,
+		UserId:    userConfig.UserId,
+		Action:    "Allowed",
+		Type:      dns.TypeToString[questions[0].Qtype],
+	}
+	logger.EmitLogs(dnsLogs)
+
 	return false
 }
