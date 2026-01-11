@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/nikhilthakur8/advoid/definitions"
@@ -47,5 +48,6 @@ func startSideCarSender(sidecarURL string) {
 }
 
 func init() {
-	go startSideCarSender("http://localhost:9000/ingest")
+	SIDECAR_URL := os.Getenv("SIDECAR_URL")
+	go startSideCarSender(SIDECAR_URL)
 }
