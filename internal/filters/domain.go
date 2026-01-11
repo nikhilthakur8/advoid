@@ -85,7 +85,7 @@ func CheckForBlockedDomain(questions []dns.Question, userConfig definitions.User
 				Timestamp: time.Now(),
 				Domain:    question.Name,
 				UserId:    userConfig.UserId,
-				Action:    false,
+				Action:    true,
 				Type:      dns.TypeToString[question.Qtype],
 			}
 			logger.EmitLogs(dnsLogs)
@@ -98,7 +98,7 @@ func CheckForBlockedDomain(questions []dns.Question, userConfig definitions.User
 				Timestamp: time.Now(),
 				Domain:    question.Name,
 				UserId:    userConfig.UserId,
-				Action:    true,
+				Action:    false,
 				Type:      dns.TypeToString[question.Qtype],
 			}
 			logger.EmitLogs(dnsLogs)
