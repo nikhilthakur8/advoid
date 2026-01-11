@@ -10,6 +10,8 @@ services:
         restart: always
         env_file:
             - .env
+        networks:
+            - advoid
 networks:
     advoid:
         external: true

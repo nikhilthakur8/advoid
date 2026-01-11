@@ -49,5 +49,8 @@ func startSideCarSender(sidecarURL string) {
 
 func init() {
 	SIDECAR_URL := os.Getenv("SIDECAR_URL")
+	if SIDECAR_URL == "" {
+		SIDECAR_URL = "http://sidecar:9000/ingest"
+	}
 	go startSideCarSender(SIDECAR_URL)
 }
